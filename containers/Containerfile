@@ -1,0 +1,28 @@
+ARG BASE_IMAGE="ghcr.io/gbraad-homelab/private-base"
+ARG BASE_VERSION="latest"
+
+FROM ${BASE_IMAGE}:${BASE_VERSION}
+
+USER root
+
+RUN dnf install -y python3.12 python3.12-devel python3-pip openssl authbind gcc gcc-c++
+
+RUN adduser hass \
+    && mkdir /home/hass/srv \
+    && chown hass:hass /home/hass/srv
+
+USER hass
+
+RUN mkdir ~/.homeassistant \
+    && cd /home/hass/srv \
+    && python3.12 -m venv . \
+    && source /home/hass/srv/bin/activate \
+    && pip install homeassistant \
+    && pip install homeassistant-cli \
+    && echo >> ~/.bashrc; echo "source /home/hass/srv/bin/activate" >> ~/.bashrc
+
+COPY files/homeassistant.service /etc/systemd/system/homeassistant.service
+
+# to allow systemd to run
+USER root
+RUN systemctl enable homeassistant.service
